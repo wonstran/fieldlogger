@@ -828,6 +828,13 @@ private fun SwipeableEventCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+                if (!event.photoPath.isNullOrBlank()) {
+                    Text(
+                        text = "Photo: ${event.photoPath.substringAfterLast("/")}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
         }
     }
