@@ -179,6 +179,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun onCapturePhotoReady() {
+        viewModelScope.launch {
+            val lastEvent = repository.getLastEvent()
+            if (lastEvent != null) {
+                _events.emit(MainUiEvent.PhotoCaptureRequested(lastEvent.id, lastEvent.eventIndex))
+            } else {
+                _events.emit(MainUiEvent.ShowSnackbar("No events to attach photo"))
+            }
+        }
+    }
     fun onPhotoCaptured(eventId: Long, photoPath: String) {
         viewModelScope.launch {
             repository.updateEventPhoto(eventId, photoPath)

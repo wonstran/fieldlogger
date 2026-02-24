@@ -105,6 +105,17 @@ fun MainScreen(
         viewModel.updateLocationEnabled(fineLocation || coarseLocation)
     }
 
+    var cameraPermissionGranted by remember { mutableStateOf(false) }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        cameraPermissionGranted = granted
+        if (granted) {
+            viewModel.onCapturePhotoReady()
+        }
+    }
+
     LaunchedEffect(Unit) {
         locationPermissionLauncher.launch(
             arrayOf(
@@ -279,7 +290,13 @@ fun MainScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     FloatingActionButton(
-                        onClick = { viewModel.onCapturePhoto() },
+                        onClick = {
+                            if (cameraPermissionGranted) {
+                                viewModel.onCapturePhotoReady()
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
                         containerColor = MaterialTheme.colorScheme.secondary
                     ) {
                         Icon(
