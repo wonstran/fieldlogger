@@ -160,7 +160,7 @@ fun MainScreen(
                     val contentValues = android.content.ContentValues().apply {
                         put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, fileName)
                         put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                        put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/FieldLogger")
+                        put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures")
                     }
                     
                     val uri = context.contentResolver.insert(
