@@ -126,16 +126,16 @@ fun MainScreen(
     }
 
     var pendingPhotoEventId by remember { mutableStateOf<Long?>(null) }
-    var pendingPhotoFile by remember { mutableStateOf<File?>(null) }
+    var pendingPhotoFileUri by remember { mutableStateOf<Uri?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && pendingPhotoEventId != null && pendingPhotoFile != null) {
-            viewModel.onPhotoCaptured(pendingPhotoEventId!!, pendingPhotoFile!!.absolutePath)
+        if (success && pendingPhotoEventId != null && pendingPhotoFileUri != null) {
+            viewModel.onPhotoCaptured(pendingPhotoEventId!!, pendingPhotoFileUri.toString())
         }
         pendingPhotoEventId = null
-        pendingPhotoFile = null
+        pendingPhotoFileUri = null
     }
 
     LaunchedEffect(Unit) {
@@ -154,19 +154,27 @@ fun MainScreen(
                     context.startActivity(Intent.createChooser(event.intent, "Share CSV"))
                 }
                 is MainUiEvent.PhotoCaptureRequested -> {
-                    val photoDir = File(context.filesDir, "photos")
-                    if (!photoDir.exists()) {
-                        photoDir.mkdirs()
+                    val timestamp = System.currentTimeMillis()
+                    val fileName = "FieldLogger_${event.eventIndex}_$timestamp.jpg"
+                    
+                    val contentValues = android.content.ContentValues().apply {
+                        put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                        put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                        put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/FieldLogger")
                     }
-                    val photoFile = File(photoDir, "event_${event.eventIndex}.jpg")
-                    pendingPhotoEventId = event.eventId
-                    pendingPhotoFile = photoFile
-                    val photoUri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        photoFile
+                    
+                    val uri = context.contentResolver.insert(
+                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        contentValues
                     )
-                    cameraLauncher.launch(photoUri)
+                    
+                    if (uri != null) {
+                        pendingPhotoEventId = event.eventId
+                        pendingPhotoFileUri = uri
+                        cameraLauncher.launch(uri)
+                    } else {
+                        snackbarHostState.showSnackbar("Failed to create photo file")
+                    }
                 }
             }
         }
