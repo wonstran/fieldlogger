@@ -10,7 +10,7 @@ interface FieldLoggerRepository {
     suspend fun getAllEventsList(): List<Event>
     suspend fun getNextIndex(): Int
     suspend fun updateEvent(event: Event)
-    suspend fun updateEventPhoto(eventId: Long, photoPath: String)
+    suspend fun addPhotoToEvent(eventId: Long, photoPath: String)
     suspend fun getLastEvent(): Event?
     suspend fun deleteEventById(eventId: Long)
     fun getEventCount(eventCode: Int): Flow<Int>

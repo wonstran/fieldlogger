@@ -27,7 +27,7 @@ class FieldLoggerRepositoryImpl @Inject constructor(
             longitude = event.longitude,
             accuracy = event.accuracy,
             note = event.note,
-            photoPath = event.photoPath
+            photoPaths = event.photoPaths.joinToString(",")
         )
         return eventDao.insert(entity)
     }
@@ -45,7 +45,7 @@ class FieldLoggerRepositoryImpl @Inject constructor(
                     longitude = entity.longitude,
                     accuracy = entity.accuracy,
                     note = entity.note,
-                    photoPath = entity.photoPath
+                    photoPaths = if (entity.photoPaths.isBlank()) emptyList() else entity.photoPaths.split(",")
                 )
             }
         }
@@ -63,7 +63,7 @@ class FieldLoggerRepositoryImpl @Inject constructor(
                 longitude = entity.longitude,
                 accuracy = entity.accuracy,
                 note = entity.note,
-                photoPath = entity.photoPath
+                photoPaths = if (entity.photoPaths.isBlank()) emptyList() else entity.photoPaths.split(",")
             )
         }
     }
@@ -93,17 +93,19 @@ class FieldLoggerRepositoryImpl @Inject constructor(
                 longitude = event.longitude,
                 accuracy = event.accuracy,
                 note = event.note,
-                photoPath = event.photoPath
+                photoPaths = event.photoPaths.joinToString(",")
             )
         )
     }
 
-    override suspend fun updateEventPhoto(eventId: Long, photoPath: String) {
+    override suspend fun addPhotoToEvent(eventId: Long, photoPath: String) {
         val allEvents = eventDao.getAllEventsList()
         eventDao.deleteAll()
         allEvents.forEach { entity ->
             if (entity.id == eventId) {
-                eventDao.insert(entity.copy(photoPath = photoPath))
+                val existingPaths = if (entity.photoPaths.isBlank()) emptyList() else entity.photoPaths.split(",")
+                val newPaths = existingPaths + photoPath
+                eventDao.insert(entity.copy(photoPaths = newPaths.joinToString(",")))
             } else {
                 eventDao.insert(entity)
             }
@@ -123,7 +125,7 @@ class FieldLoggerRepositoryImpl @Inject constructor(
                 longitude = entity.longitude,
                 accuracy = entity.accuracy,
                 note = entity.note,
-                photoPath = entity.photoPath
+                photoPaths = if (entity.photoPaths.isBlank()) emptyList() else entity.photoPaths.split(",")
             )
         }
     }

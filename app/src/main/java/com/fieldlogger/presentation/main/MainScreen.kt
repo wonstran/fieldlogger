@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -31,14 +32,18 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.AlertDialog
+import coil.compose.AsyncImage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,11 +58,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -80,6 +87,9 @@ import com.fieldlogger.BuildConfig
 import com.fieldlogger.domain.model.Event
 import com.fieldlogger.domain.model.EventButton
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,8 +104,12 @@ fun MainScreen(
     var showEditButtonDialog by remember { mutableStateOf(false) }
     var editingButton by remember { mutableStateOf<EventButton?>(null) }
     var showExportDialog by remember { mutableStateOf(false) }
-    var exportFileName by remember { mutableStateOf("") }
+    var exportFileName by remember { 
+        mutableStateOf("FieldLogger_${SimpleDateFormat("yyyyMMdd-HHmm", Locale.getDefault()).format(Date())}") 
+    }
     var editButtonName by remember { mutableStateOf("") }
+    var showAutoExportDialog by remember { mutableStateOf(false) }
+    var autoExportInterval by remember { mutableStateOf("5") }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -154,8 +168,9 @@ fun MainScreen(
                     context.startActivity(Intent.createChooser(event.intent, "Share CSV"))
                 }
                 is MainUiEvent.PhotoCaptureRequested -> {
-                    val timestamp = System.currentTimeMillis()
-                    val fileName = "FieldLogger_${event.eventIndex}_$timestamp.jpg"
+                    val timestamp = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(Date())
+                    val safeName = event.eventName.replace(" ", "_").replace(Regex("[^a-zA-Z0-9_]"), "")
+                    val fileName = "FieldLogger_${event.eventIndex}_${safeName}_$timestamp.jpg"
                     
                     val contentValues = android.content.ContentValues().apply {
                         put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, fileName)
@@ -181,47 +196,54 @@ fun MainScreen(
     }
 
     Scaffold(
+        containerColor = Color(0xFFF2F2F7),
         topBar = {
             TopAppBar(
-                title = { Text("Field Logger (v${BuildConfig.VERSION_NAME})") },
+                title = { 
+                    Text(
+                        "Field Logger", 
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    ) 
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White
+                    containerColor = Color.White,
+                    titleContentColor = Color.Black
                 ),
                 actions = {
                     IconButton(onClick = { showClearDialog = true }) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Clear All",
-                            tint = Color.White
+                            tint = Color(0xFF007AFF)
                         )
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = Color.White
+                            tint = Color(0xFF007AFF)
                         )
                     }
-                    IconButton(onClick = { viewModel.onReview() }) {
+                    IconButton(onClick = { showAutoExportDialog = true }) {
                         Icon(
-                            Icons.Default.List,
-                            contentDescription = "Review Events",
-                            tint = Color.White
+                            Icons.Default.Timer,
+                            contentDescription = "Auto Export Settings",
+                            tint = if (uiState.autoExportEnabled) Color(0xFF34C759) else Color(0xFF007AFF)
                         )
                     }
                     IconButton(onClick = { showExportDialog = true }) {
                         Icon(
-                            Icons.Default.FileDownload,
-                            contentDescription = "Export CSV",
-                            tint = Color.White
+                            Icons.Default.Save,
+                            contentDescription = "Save CSV",
+                            tint = Color(0xFF007AFF)
                         )
                     }
                     IconButton(onClick = { viewModel.onShare() }) {
                         Icon(
                             Icons.Default.Share,
                             contentDescription = "Share CSV",
-                            tint = Color.White
+                            tint = Color(0xFF007AFF)
                         )
                     }
                 }
@@ -273,13 +295,6 @@ fun MainScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                EventCountsRow(
-                    buttons = uiState.buttons,
-                    eventCounts = uiState.eventCounts
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 EventButtonsGrid(
                     buttons = uiState.buttons,
                     eventCounts = uiState.eventCounts,
@@ -291,17 +306,18 @@ fun MainScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
+                    // White outer ring
                     Surface(
-                        modifier = Modifier.size(72.dp),
+                        modifier = Modifier.size(80.dp),
                         shape = androidx.compose.foundation.shape.CircleShape,
-                        color = MaterialTheme.colorScheme.secondary,
-                        shadowElevation = 8.dp,
+                        color = Color.White,
+                        shadowElevation = 4.dp,
                         onClick = {
                             if (cameraPermissionGranted) {
                                 viewModel.onCapturePhotoReady()
@@ -310,9 +326,15 @@ fun MainScreen(
                             }
                         }
                     ) {
+                        // Inner colored circle
                         Box(
                             contentAlignment = Alignment.Center,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .size(68.dp)
+                                .background(
+                                    Color(0xFF007AFF),
+                                    androidx.compose.foundation.shape.CircleShape
+                                )
                         ) {
                             Icon(
                                 Icons.Default.CameraAlt,
@@ -338,8 +360,20 @@ fun MainScreen(
         if (showClearDialog) {
             AlertDialog(
                 onDismissRequest = { showClearDialog = false },
-                title = { Text("Clear All Events") },
-                text = { Text("Are you sure you want to delete all recorded events? This action cannot be undone.") },
+                title = { 
+                    Text(
+                        "Clear All Events",
+                        fontWeight = FontWeight(600)
+                    ) 
+                },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(20.dp),
+                text = { 
+                    Text(
+                        "Are you sure you want to delete all recorded events? This action cannot be undone.",
+                        color = Color.Gray
+                    ) 
+                },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -347,12 +381,12 @@ fun MainScreen(
                             showClearDialog = false
                         }
                     ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                        Text("Delete", color = Color(0xFFFF3B30))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showClearDialog = false }) {
-                        Text("Cancel")
+                        Text("Cancel", color = Color(0xFF007AFF))
                     }
                 }
             )
@@ -361,42 +395,112 @@ fun MainScreen(
         if (showExportDialog) {
             AlertDialog(
                 onDismissRequest = { showExportDialog = false },
-                title = { Text("Export to CSV") },
+                title = { 
+                    Text(
+                        "Save CSV",
+                        fontWeight = FontWeight(600)
+                    ) 
+                },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(20.dp),
                 text = {
                     Column {
                         OutlinedTextField(
-                            value = exportFileName,
-                            onValueChange = { exportFileName = it },
-                            label = { Text("File Name (optional)") },
-                            placeholder = { Text("Leave empty for auto-generated") },
+                            value = if (exportFileName.startsWith("FieldLogger_")) exportFileName else "FieldLogger_$exportFileName",
+                            onValueChange = { 
+                                exportFileName = if (it.startsWith("FieldLogger_")) it else "FieldLogger_$it"
+                            },
+                            label = { Text("File Name") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "File will be saved to Downloads folder",
+                            text = "Will be saved to Downloads as [name].csv",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.Gray,
+                            fontSize = 12.sp
                         )
                     }
                 },
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            val fileName = exportFileName.takeIf { it.isNotBlank() }?.let {
-                                if (it.endsWith(".csv")) it else "$it.csv"
-                            }
+                            val fileName = if (exportFileName.endsWith(".csv")) exportFileName else "$exportFileName.csv"
                             viewModel.onExport(fileName)
                             showExportDialog = false
-                            exportFileName = ""
+                            exportFileName = "FieldLogger_${SimpleDateFormat("yyyyMMdd-HHmm", Locale.getDefault()).format(Date())}"
                         }
                     ) {
-                        Text("Export")
+                        Text("Save", color = Color(0xFF007AFF))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showExportDialog = false }) {
-                        Text("Cancel")
+                        Text("Cancel", color = Color(0xFF007AFF))
+                    }
+                }
+            )
+        }
+
+        if (showAutoExportDialog) {
+            var isEnabled by remember { mutableStateOf(uiState.autoExportEnabled) }
+            
+            AlertDialog(
+                onDismissRequest = { showAutoExportDialog = false },
+                title = { Text("Auto Export Settings", fontWeight = FontWeight(600)) },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(20.dp),
+                text = {
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Enable Auto Export", modifier = Modifier.weight(1f))
+                            androidx.compose.material3.Switch(
+                                checked = isEnabled,
+                                onCheckedChange = { isEnabled = it }
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        OutlinedTextField(
+                            value = autoExportInterval,
+                            onValueChange = { autoExportInterval = it.filter { c -> c.isDigit() } },
+                            label = { Text("Interval (minutes)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = isEnabled
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = "File: FieldLogger_yyyymmdd-hhmm.csv will be saved to Downloads",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.setAutoExportEnabled(isEnabled)
+                            val interval = autoExportInterval.toIntOrNull() ?: 5
+                            viewModel.setAutoExportInterval(interval)
+                            showAutoExportDialog = false
+                        }
+                    ) {
+                        Text("Save", color = Color(0xFF007AFF))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAutoExportDialog = false }) {
+                        Text("Cancel", color = Color(0xFF007AFF))
                     }
                 }
             )
@@ -446,8 +550,10 @@ private fun StatusCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+            containerColor = Color.White
+        ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -460,12 +566,14 @@ private fun StatusCard(
                 Text(
                     text = "Total Events",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.Gray,
+                    fontSize = 13.sp
                 )
                 Text(
                     text = totalCount.toString(),
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -473,15 +581,16 @@ private fun StatusCard(
                     Text(
                         text = timestamp,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.Gray,
+                        fontSize = 12.sp
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.LocationOn,
                         contentDescription = "Location",
-                        tint = if (isLocationEnabled) Color(0xFF43A047) else Color.Gray,
-                        modifier = Modifier.size(16.dp)
+                        tint = if (isLocationEnabled) Color(0xFF34C759) else Color.Gray,
+                        modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -493,7 +602,8 @@ private fun StatusCard(
                             "No GPS"
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.Gray,
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -577,13 +687,14 @@ private fun EventButtonItem(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
+            .height(110.dp)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
         color = Color(button.color),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(24.dp),
+        shadowElevation = 4.dp
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -591,21 +702,24 @@ private fun EventButtonItem(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = button.code.toString(),
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
+                text = button.name,
+                fontSize = 18.sp,
+                fontWeight = FontWeight(600),
                 color = Color.White
             )
-            Text(
-                text = button.name,
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-            Text(
-                text = "$count recorded",
-                fontSize = 10.sp,
-                color = Color.White.copy(alpha = 0.7f)
-            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Surface(
+                color = Color.White.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "$count recorded",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight(500),
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
         }
     }
 }
@@ -619,6 +733,8 @@ private fun ReviewDialog(
 ) {
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
     var showEditDialog by remember { mutableStateOf<Event?>(null) }
+    var showPhotoDialog by remember { mutableStateOf<List<String>?>(null) }
+    var currentPhotoIndex by remember { mutableStateOf(0) }
     var editEventName by remember { mutableStateOf("") }
     var editTimestamp by remember { mutableStateOf("") }
     var editLatitude by remember { mutableStateOf("") }
@@ -627,10 +743,17 @@ private fun ReviewDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Event History") },
+        title = { 
+            Text(
+                "Event History", 
+                fontWeight = FontWeight(600)
+            ) 
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(20.dp),
         text = {
             if (events.isEmpty()) {
-                Text("No events recorded yet.")
+                Text("No events recorded yet.", color = Color.Gray)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth()
@@ -646,6 +769,9 @@ private fun ReviewDialog(
                                 editLatitude = event.latitude.toString()
                                 editLongitude = event.longitude.toString()
                                 editNote = event.note
+                            },
+                            onPhotoClick = { photoPaths ->
+                                showPhotoDialog = photoPaths
                             }
                         )
                     }
@@ -654,7 +780,7 @@ private fun ReviewDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text("Close", color = Color(0xFF007AFF))
             }
         }
     )
@@ -749,6 +875,79 @@ private fun ReviewDialog(
             }
         )
     }
+
+    if (showPhotoDialog != null && showPhotoDialog!!.isNotEmpty()) {
+        val currentPhoto = showPhotoDialog!![currentPhotoIndex]
+        
+        AlertDialog(
+            onDismissRequest = { 
+                showPhotoDialog = null
+                currentPhotoIndex = 0
+            },
+            title = { 
+                Text(
+                    "Photo ${currentPhotoIndex + 1} of ${showPhotoDialog!!.size}", 
+                    fontWeight = FontWeight(600)
+                ) 
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val photoUri = try {
+                        android.net.Uri.parse(currentPhoto)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    
+                    if (photoUri != null) {
+                        AsyncImage(
+                            model = photoUri,
+                            contentDescription = "Photo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Text("Unable to load image", color = Color.Gray)
+                    }
+                    
+                    if (showPhotoDialog!!.size > 1) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            TextButton(
+                                onClick = { if (currentPhotoIndex > 0) currentPhotoIndex-- },
+                                enabled = currentPhotoIndex > 0
+                            ) {
+                                Text("Previous")
+                            }
+                            TextButton(
+                                onClick = { if (currentPhotoIndex < showPhotoDialog!!.size - 1) currentPhotoIndex++ },
+                                enabled = currentPhotoIndex < showPhotoDialog!!.size - 1
+                            ) {
+                                Text("Next")
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showPhotoDialog = null
+                    currentPhotoIndex = 0
+                }) {
+                    Text("Close", color = Color(0xFF007AFF))
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -756,7 +955,8 @@ private fun ReviewDialog(
 private fun SwipeableEventCard(
     event: Event,
     onDelete: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onPhotoClick: (List<String>) -> Unit
 ) {
     var offsetX by remember { mutableStateOf(0f) }
     val threshold = -150f
@@ -806,43 +1006,92 @@ private fun SwipeableEventCard(
                     )
                 },
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+                containerColor = Color.White
+            ),
+            shape = RoundedCornerShape(14.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(14.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "#${event.eventIndex} ${event.eventName}",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = Color(0xFF007AFF),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "#${event.eventIndex}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = event.eventName,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 15.sp,
+                            color = Color.Black
+                        )
+                    }
                     Text(
                         text = event.timestamp.takeLast(8),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        fontSize = 12.sp
                     )
                 }
-                Text(
-                    text = "%.5f, %.5f".format(event.latitude, event.longitude),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "%.5f, %.5f".format(event.latitude, event.longitude),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                }
                 if (event.note.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = event.note,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFF007AFF),
+                        fontSize = 12.sp
                     )
                 }
-                if (!event.photoPath.isNullOrBlank()) {
-                    Text(
-                        text = "Photo: ${event.photoPath.substringAfterLast("/")}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                if (event.photoPaths.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = "Photos",
+                            tint = Color(0xFF34C759),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${event.photoPaths.size} photo(s)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF34C759),
+                            fontSize = 12.sp,
+                            modifier = Modifier.clickable { 
+                                onPhotoClick(event.photoPaths) 
+                            }
+                        )
+                    }
                 }
             }
         }

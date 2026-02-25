@@ -15,5 +15,5 @@ data class EventEntity(
     val longitude: Double,
     val accuracy: Float?,
     val note: String,
-    val photoPath: String? = null
+    val photoPaths: String = ""  // comma-separated paths
 )

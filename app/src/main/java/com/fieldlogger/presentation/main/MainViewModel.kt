@@ -41,14 +41,17 @@ data class MainUiState(
     val hasEvents: Boolean = false,
     val canUndo: Boolean = false,
     val showReviewDialog: Boolean = false,
-    val allEvents: List<Event> = emptyList()
+    val allEvents: List<Event> = emptyList(),
+    val autoExportEnabled: Boolean = false,
+    val autoExportFileName: String = "FieldLogger_Auto",
+    val autoExportIntervalMinutes: Int = 5
 )
 
 sealed class MainUiEvent {
     data class ShowSnackbar(val message: String) : MainUiEvent()
     data class ExportSuccess(val path: String) : MainUiEvent()
     data class ShareIntent(val intent: Intent) : MainUiEvent()
-    data class PhotoCaptureRequested(val eventId: Long, val eventIndex: Int) : MainUiEvent()
+    data class PhotoCaptureRequested(val eventId: Long, val eventIndex: Int, val eventName: String) : MainUiEvent()
     object ExportError : MainUiEvent()
 }
 
@@ -85,6 +88,48 @@ class MainViewModel @Inject constructor(
         }
         observeButtons()
         observeLocation()
+        startAutoExportTimer()
+    }
+
+    private fun startAutoExportTimer() {
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(60000) // Check every minute
+                val state = _uiState.value
+                if (state.autoExportEnabled && state.autoExportIntervalMinutes > 0) {
+                    performAutoExport()
+                }
+            }
+        }
+    }
+
+    private suspend fun performAutoExport() {
+        val events = getAllEventsUseCase.getList()
+        if (events.isEmpty()) return
+
+        val state = _uiState.value
+        val fileName = "FieldLogger_${state.autoExportFileName}.csv"
+        val result = csvExporter.exportToCsv(events, fileName)
+        result.fold(
+            onSuccess = { path ->
+                _events.emit(MainUiEvent.ShowSnackbar("Auto-exported: $path"))
+            },
+            onFailure = {
+                // Silent fail for auto-export
+            }
+        )
+    }
+
+    fun setAutoExportEnabled(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(autoExportEnabled = enabled)
+    }
+
+    fun setAutoExportFileName(fileName: String) {
+        _uiState.value = _uiState.value.copy(autoExportFileName = fileName)
+    }
+
+    fun setAutoExportInterval(minutes: Int) {
+        _uiState.value = _uiState.value.copy(autoExportIntervalMinutes = minutes)
     }
 
     private fun observeButtons() {
@@ -172,7 +217,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val lastEvent = repository.getLastEvent()
             if (lastEvent != null) {
-                _events.emit(MainUiEvent.PhotoCaptureRequested(lastEvent.id, lastEvent.eventIndex))
+                _events.emit(MainUiEvent.PhotoCaptureRequested(lastEvent.id, lastEvent.eventIndex, lastEvent.eventName))
             } else {
                 _events.emit(MainUiEvent.ShowSnackbar("No events to attach photo"))
             }
@@ -183,7 +228,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val lastEvent = repository.getLastEvent()
             if (lastEvent != null) {
-                _events.emit(MainUiEvent.PhotoCaptureRequested(lastEvent.id, lastEvent.eventIndex))
+                _events.emit(MainUiEvent.PhotoCaptureRequested(lastEvent.id, lastEvent.eventIndex, lastEvent.eventName))
             } else {
                 _events.emit(MainUiEvent.ShowSnackbar("No events to attach photo"))
             }
@@ -191,7 +236,7 @@ class MainViewModel @Inject constructor(
     }
     fun onPhotoCaptured(eventId: Long, photoPath: String) {
         viewModelScope.launch {
-            repository.updateEventPhoto(eventId, photoPath)
+            repository.addPhotoToEvent(eventId, photoPath)
             _events.emit(MainUiEvent.ShowSnackbar("Photo attached to event"))
         }
     }

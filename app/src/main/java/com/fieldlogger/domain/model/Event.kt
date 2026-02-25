@@ -10,5 +10,5 @@ data class Event(
     val longitude: Double,
     val accuracy: Float? = null,
     val note: String = "",
-    val photoPath: String? = null
+    val photoPaths: List<String> = emptyList()
 )

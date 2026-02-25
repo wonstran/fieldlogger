@@ -100,16 +100,20 @@ class CsvExporter @Inject constructor(
 
     private fun buildCsvContent(events: List<Event>): String {
         val sb = StringBuilder()
-        sb.appendLine("Index,Event Name,Timestamp,Latitude,Longitude,Note")
+        sb.appendLine("Index,Event Name,Timestamp,Latitude,Longitude,Note,Photos")
 
         events.sortedBy { it.eventIndex }.forEach { event ->
+            val photoNames = event.photoPaths.joinToString("; ") { 
+                it.substringAfterLast("/") 
+            }
             sb.appendLine(
                 "${event.eventIndex}," +
                 "\"${escapeCsv(event.eventName)}\"," +
                 "${event.timestamp}," +
                 "${event.latitude}," +
                 "${event.longitude}," +
-                "\"${escapeCsv(event.note)}\""
+                "\"${escapeCsv(event.note)}\"," +
+                "\"$photoNames\""
             )
         }
 
