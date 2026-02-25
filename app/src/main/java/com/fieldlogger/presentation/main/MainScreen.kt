@@ -297,21 +297,30 @@ fun MainScreen(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    FloatingActionButton(
+                    Surface(
+                        modifier = Modifier.size(72.dp),
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = MaterialTheme.colorScheme.secondary,
+                        shadowElevation = 8.dp,
                         onClick = {
                             if (cameraPermissionGranted) {
                                 viewModel.onCapturePhotoReady()
                             } else {
                                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             }
-                        },
-                        containerColor = MaterialTheme.colorScheme.secondary
+                        }
                     ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = "Take Photo",
-                            tint = Color.White
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = "Take Photo",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
             }
