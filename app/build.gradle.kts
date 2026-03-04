@@ -25,8 +25,18 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(project.property("keystore.file") as String)
+            storePassword = project.property("keystore.password") as String
+            keyAlias = project.property("keystore.alias") as String
+            keyPassword = project.property("keystore.alias_password") as String
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

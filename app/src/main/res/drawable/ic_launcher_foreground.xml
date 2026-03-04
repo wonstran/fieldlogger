@@ -4,10 +4,26 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Simple rounded rectangle - notepad -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,36 m-18,0 a18,18 0 1,1 36,0 a18,18 0 1,1 -36,0"/>
+        android:pathData="M34,28h40c2.2,0 4,1.8 4,4v44c0,2.2 -1.8,4 -4,4H34c-2.2,0 -4,-1.8 -4,-4V32c0,-2.2 1.8,-4 4,-4z"/>
+    <!-- Three simple lines -->
     <path
-        android:fillColor="#1565C0"
-        android:pathData="M54,36 m-12,0 a12,12 0 1,1 24,0 a12,12 0 1,1 -24,0"/>
+        android:fillColor="#1A1A1A"
+        android:pathData="M38,42h32v2H38z"/>
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M38,52h32v2H38z"/>
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M38,62h20v2H38z"/>
+    <!-- Simple camera circle - bottom right -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M62,62m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0"/>
+    <!-- Camera lens dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M62,62m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0"/>
 </vector>

@@ -44,7 +44,11 @@ data class MainUiState(
     val allEvents: List<Event> = emptyList(),
     val autoExportEnabled: Boolean = false,
     val autoExportFileName: String = "FieldLogger_Auto",
-    val autoExportIntervalMinutes: Int = 5
+    val autoExportIntervalMinutes: Int = 5,
+    val totalImageSize: Long = 0L,
+    val formattedImageSize: String = "",
+    val hasImages: Boolean = false,
+    val showShareDialog: Boolean = false
 )
 
 sealed class MainUiEvent {
@@ -234,6 +238,7 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
     fun onPhotoCaptured(eventId: Long, photoPath: String) {
         viewModelScope.launch {
             repository.addPhotoToEvent(eventId, photoPath)
@@ -319,21 +324,48 @@ class MainViewModel @Inject constructor(
 
     fun onShare() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
             val events = getAllEventsUseCase.getList()
 
             if (events.isEmpty()) {
-                _uiState.value = _uiState.value.copy(isLoading = false)
                 _events.emit(MainUiEvent.ShowSnackbar("No events to share"))
                 return@launch
             }
 
-            val exportResult = csvExporter.exportToCsvForShare(events)
+            // Calculate total image size and check if there are images
+            val totalSize = csvExporter.getTotalImageSize(events)
+            val hasImages = events.any { it.photoPaths.isNotEmpty() }
+            val formattedSize = csvExporter.formatFileSize(totalSize)
+
+            _uiState.value = _uiState.value.copy(
+                showShareDialog = true,
+                totalImageSize = totalSize,
+                formattedImageSize = formattedSize,
+                hasImages = hasImages
+            )
+        }
+    }
+
+    fun onShareConfirm(includeImages: Boolean) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                showShareDialog = false
+            )
+
+            val events = getAllEventsUseCase.getList()
+
+            val result = if (includeImages) {
+                csvExporter.shareWithImages(events)
+            } else {
+                csvExporter.exportToCsvForShare(events).map { uri ->
+                    csvExporter.shareFile(uri)
+                }
+            }
+
             _uiState.value = _uiState.value.copy(isLoading = false)
 
-            exportResult.fold(
-                onSuccess = { uri ->
-                    val intent = csvExporter.shareFile(uri)
+            result.fold(
+                onSuccess = { intent ->
                     _events.emit(MainUiEvent.ShareIntent(intent))
                 },
                 onFailure = {
@@ -341,6 +373,10 @@ class MainViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    fun onShareDismiss() {
+        _uiState.value = _uiState.value.copy(showShareDialog = false)
     }
 
     fun onClearAll() {

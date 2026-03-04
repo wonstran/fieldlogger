@@ -1,5 +1,6 @@
 package com.fieldlogger.util
 
+import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -84,11 +85,93 @@ class CsvExporter @Inject constructor(
         }
     }
 
+    fun getTotalImageSize(events: List<Event>): Long {
+        var totalSize = 0L
+        events.forEach { event ->
+            event.photoPaths.forEach { path ->
+                try {
+                    val uri = Uri.parse(path)
+                    context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                        totalSize += pfd.statSize
+                    }
+                } catch (e: Exception) {
+                    // Skip files that can't be accessed
+                }
+            }
+        }
+        return totalSize
+    }
+
+    fun formatFileSize(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+            else -> "${bytes / (1024 * 1024)} MB"
+        }
+    }
+
+    fun shareWithImages(events: List<Event>): Result<Intent> {
+        return try {
+            val csvFileName = generateFileName()
+            val csvContent = buildCsvContent(events)
+            val csvFile = File(context.cacheDir, csvFileName)
+            csvFile.writeText(csvContent)
+
+            val csvUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                csvFile
+            )
+
+            val uris = mutableListOf<Uri>()
+            uris.add(csvUri)
+
+            // Add image URIs
+            events.forEach { event ->
+                event.photoPaths.forEach { path ->
+                    try {
+                        val uri = Uri.parse(path)
+                        uris.add(uri)
+                    } catch (e: Exception) {
+                        // Skip files that can't be parsed
+                    }
+                }
+            }
+
+            val intent = if (uris.size > 1) {
+                Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                    type = "*/*"
+                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    
+                    // Use ClipData to grant permissions for all URIs more reliably
+                    clipData = ClipData.newRawUri("Field Logger Data", uris[0]).apply {
+                        for (i in 1 until uris.size) {
+                            addItem(ClipData.Item(uris[i]))
+                        }
+                    }
+                }
+            } else {
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_STREAM, csvUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    clipData = ClipData.newRawUri("Field Logger CSV", csvUri)
+                }
+            }
+
+            Result.success(intent)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun shareFile(uri: Uri): Intent {
         return Intent(Intent.ACTION_SEND).apply {
             type = "text/csv"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            clipData = ClipData.newRawUri("Field Logger CSV", uri)
         }
     }
 
