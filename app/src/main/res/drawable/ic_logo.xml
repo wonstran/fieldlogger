@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Green Field Bottom (Pin point) -->
+    <path
+        android:pathData="M50,98 C50,98 25,75 18,55 L82,55 C75,75 50,98 50,98 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="50"
+                android:centerY="75"
+                android:gradientRadius="30"
+                android:type="radial">
+                <item android:color="#FF4CAF50" android:offset="0.0" />
+                <item android:color="#FF1B5E20" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Field detail layers -->
+    <path
+        android:pathData="M22,65 Q40,75 50,98"
+        android:strokeColor="#81C784"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M28,75 Q45,85 50,98"
+        android:strokeColor="#81C784"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- Blue Top Circle -->
+    <path
+        android:pathData="M50,5 C30.7,5 15,20.7 15,40 C15,47.5 16.2,54.5 18,55 L82,55 C83.8,54.5 85,47.5 85,40 C85,20.7 69.3,5 50,5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="15"
+                android:startY="30"
+                android:endX="85"
+                android:endY="30"
+                android:type="linear">
+                <item android:color="#FF4FC3F7" android:offset="0.0" />
+                <item android:color="#FF0277BD" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Inner White Hole -->
+    <path
+        android:pathData="M50,18 A22,22 0 1 0 50,62 A22,22 0 1 0 50,18 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Orange Checkmark -->
+    <path
+        android:pathData="M42,42 L52,52 L78,25"
+        android:strokeWidth="10"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="42"
+                android:startY="42"
+                android:endX="78"
+                android:endY="25"
+                android:type="linear">
+                <item android:color="#FFFFB74D" android:offset="0.0" />
+                <item android:color="#FFF57C00" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

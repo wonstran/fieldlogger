@@ -1,0 +1,29 @@
+package com.fieldlogger.util
+
+object ColorConstants {
+    val colorOptions = listOf(
+        // Row 1: Reds/Pinks
+        0xFFE53935, 0xFFD81B60, 0xFFC2185B, 0xFF880E4F,
+        // Row 2: Purples
+        0xFF8E24AA, 0xFF7B1FA2, 0xFF4A148C, 0xFF6200EA,
+        // Row 3: Indigos/Blues
+        0xFF3F51B5, 0xFF303F9F, 0xFF1A237E, 0xFF3D5AFE,
+        0xFF1E88E5, 0xFF1976D2, 0xFF0D47A1, 0xFF2962FF,
+        // Row 4: Cyans/Teals
+        0xFF00ACC1, 0xFF0097A7, 0xFF006064, 0xFF00B8D4,
+        0xFF00897B, 0xFF00796B, 0xFF004D40, 0xFF00BFA5,
+        // Row 5: Greens
+        0xFF43A047, 0xFF388E3C, 0xFF1B5E20, 0xFF00C853,
+        0xFF7CB342, 0xFF689F38, 0xFF33691E, 0xFF64DD17,
+        // Row 6: Yellows/Ambers
+        0xFFFDD835, 0xFFFBC02D, 0xFFF57F17, 0xFFFFD600,
+        0xFFFFB300, 0xFFFFA000, 0xFFFF6F00, 0xFFFFAB00,
+        // Row 7: Oranges
+        0xFFFB8C00, 0xFFF57C00, 0xFFE65100, 0xFFFF6D00,
+        0xFFF4511E, 0xFFE64A19, 0xFFBF360C, 0xFFDD2C00,
+        // Row 8: Browns/Greys
+        0xFF6D4C41, 0xFF5D4037, 0xFF3E2723, 0xFF4E342E,
+        0xFF757575, 0xFF616161, 0xFF424242, 0xFF212121,
+        0xFF546E7A, 0xFF455A64, 0xFF263238, 0xFF37474F
+    )
+}
